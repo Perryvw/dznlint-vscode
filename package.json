@@ -26,7 +26,8 @@
     "scripts": {
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
-        "watch": "tsc -watch -p ./"
+        "watch": "tsc -watch -p ./",
+        "package": "vsce package"
     },
     "devDependencies": {
         "@types/node": "14.x",
@@ -37,9 +38,9 @@
         "eslint": "^8.6.0",
         "prettier": "^2.5.1",
         "typescript": "^4.5.4",
-        "vsce": "^2.6.7"
+        "vsce": "^2.11.0"
     },
     "dependencies": {
-        "dznlint": "^0.0.20"
+        "dznlint": "^0.0.21"
     }
 }
