@@ -50,7 +50,17 @@ function isDznFile(document: vscode.TextDocument): boolean {
 }
 
 function updateDiagnostics(document: vscode.TextDocument, configuration?: dznlint.DznLintUserConfiguration): void {
-    const diagnostics = dznlint.lintString(document.getText(), configuration);
+    const includePaths = vscode.workspace.getConfiguration("dznlint").get<string>("includePaths")?.trim() ?? "";
+    const root = workspaceRoot();
+    const splitIncludePaths = includePaths.length > 0 
+        ? includePaths.split(";")
+            .map(p => p.trim())
+            .filter(p => p.length > 0)
+            .map(p => path.join(root, p)) 
+        : [];
+    const source = { fileName: document.fileName, fileContent: document.getText()};
+    const diagnostics = dznlint.lint([source], configuration, { includePaths: splitIncludePaths });
+    console.log(diagnostics);
 
     const documentDiagnostics = [];
 
@@ -84,10 +94,13 @@ function tryLoadDznLintConfig(): DznLintUserConfiguration | undefined {
         return;
     }
 
-    const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
-    const configFilePath = path.join(workspaceRoot, dznlint.DEFAULT_DZNLINT_CONFIG_FILE);
+    const configFilePath = path.join(workspaceRoot(), dznlint.DEFAULT_DZNLINT_CONFIG_FILE);
 
     if (fs.existsSync(configFilePath)) {
         return JSON.parse(fs.readFileSync(configFilePath).toString());
     }
+}
+
+function workspaceRoot() {
+    return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd();
 }
