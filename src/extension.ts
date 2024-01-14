@@ -1,14 +1,18 @@
-import * as dznlint from "dznlint";
-import { DznLintUserConfiguration } from "dznlint/dist/config/dznlint-configuration";
 import * as fs from "fs";
 import * as path from "path";
+
 import * as vscode from "vscode";
+import * as dznlint from "dznlint";
 
 const dznDiagnosticsCollection = vscode.languages.createDiagnosticCollection("dznlint-diagnostics");
+
+let program: dznlint.Program;
 
 // this method is called when your extension is activated
 export function activate(context: vscode.ExtensionContext) {
     console.log("dznlint-vscode active");
+
+    program = new dznlint.Program();
 
     // Push dznlint diagnostics collection to editor
     context.subscriptions.push(dznDiagnosticsCollection);
@@ -50,17 +54,12 @@ function isDznFile(document: vscode.TextDocument): boolean {
 }
 
 function updateDiagnostics(document: vscode.TextDocument, configuration?: dznlint.DznLintUserConfiguration): void {
-    const includePaths = vscode.workspace.getConfiguration("dznlint").get<string>("includePaths")?.trim() ?? "";
-    const root = workspaceRoot();
-    const splitIncludePaths = includePaths.length > 0 
-        ? includePaths.split(";")
-            .map(p => p.trim())
-            .filter(p => p.length > 0)
-            .map(p => path.join(root, p)) 
-        : [];
-    const source = { fileName: document.fileName, fileContent: document.getText()};
-    const diagnostics = dznlint.lint([source], configuration, { includePaths: splitIncludePaths });
-    console.log(diagnostics);
+    program.host.includePaths = readIncludePaths();
+    // Force the file cache to reload
+    const sourceFile = program.parseFile(document.fileName, document.getText());
+    if (!sourceFile) throw `Failed to parse new source file for ${document.fileName}`;
+
+    const diagnostics = dznlint.lint([sourceFile], configuration, program);
 
     const documentDiagnostics = [];
 
@@ -78,6 +77,17 @@ function updateDiagnostics(document: vscode.TextDocument, configuration?: dznlin
     dznDiagnosticsCollection.set(document.uri, documentDiagnostics);
 }
 
+function readIncludePaths(): string[] {
+    const includePaths = vscode.workspace.getConfiguration("dznlint").get<string>("includePaths")?.trim() ?? "";
+    const root = workspaceRoot();
+    return includePaths.length > 0 
+        ? includePaths.split(";")
+            .map(p => p.trim())
+            .filter(p => p.length > 0)
+            .map(p => path.join(root, p)) 
+        : [];
+}
+
 function mapSeverity(severity: dznlint.DiagnosticSeverity): vscode.DiagnosticSeverity {
     switch (severity) {
         case dznlint.DiagnosticSeverity.Hint:
@@ -89,7 +99,7 @@ function mapSeverity(severity: dznlint.DiagnosticSeverity): vscode.DiagnosticSev
     }
 }
 
-function tryLoadDznLintConfig(): DznLintUserConfiguration | undefined {
+function tryLoadDznLintConfig(): dznlint.DznLintUserConfiguration | undefined {
     if (!vscode.workspace.workspaceFolders) {
         return;
     }
