@@ -27,7 +27,7 @@
             "title": "dznlint",
             "properties": {
                 "dznlint.includePaths": {
-                    "description": "Include paths to use while resolving .dzn imports, separated by ;",
+                    "description": "Include paths to use while resolving .dzn imports, separated by ; or in dzn -I format",
                     "type": "string",
                     "default": ""
                 }

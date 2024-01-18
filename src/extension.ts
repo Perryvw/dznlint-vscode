@@ -80,12 +80,20 @@ function updateDiagnostics(document: vscode.TextDocument, configuration?: dznlin
 function readIncludePaths(): string[] {
     const includePaths = vscode.workspace.getConfiguration("dznlint").get<string>("includePaths")?.trim() ?? "";
     const root = workspaceRoot();
-    return includePaths.length > 0 
-        ? includePaths.split(";")
+
+    let splitPaths: string[];
+    if (includePaths.includes("-I ")) {
+        splitPaths = includePaths
+            .split("-I ")
             .map(p => p.trim())
-            .filter(p => p.length > 0)
-            .map(p => path.join(root, p)) 
-        : [];
+            .filter(p => p.length > 0);
+    } else {
+        splitPaths = includePaths
+            .split(";")
+            .map(p => p.trim())
+            .filter(p => p.length > 0);
+    }
+    return splitPaths.map(p => (path.isAbsolute(p) ? p : path.join(root, p)));
 }
 
 function mapSeverity(severity: dznlint.DiagnosticSeverity): vscode.DiagnosticSeverity {
