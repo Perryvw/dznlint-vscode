@@ -78,7 +78,12 @@ function updateDiagnostics(document: vscode.TextDocument, configuration?: dznlin
 }
 
 function readIncludePaths(): string[] {
-    const includePaths = vscode.workspace.getConfiguration("dznlint").get<string>("includePaths")?.trim() ?? "";
+    let includePaths = vscode.workspace.getConfiguration("dznlint").get<string>("includePaths")?.trim() ?? "";
+    if (includePaths.length === 0) {
+        // If no dznlint include dirs were found, try looking for dezyne.ide include paths instead
+        includePaths = vscode.workspace.getConfiguration("dezyne.ide").get<string>("importPath")?.trim() ?? "";
+    }
+
     const root = workspaceRoot();
 
     let splitPaths: string[];
