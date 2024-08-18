@@ -11,10 +11,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - name: Use Node.js 16.13.2
+      - name: Use Node.js 20.9.0
         uses: actions/setup-node@v1
         with:
-          node-version: 16.13.2
+          node-version: 20.9.0
           registry-url: "https://registry.npmjs.org"
       - run: npm ci
       - run: npm run package
