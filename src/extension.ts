@@ -44,6 +44,18 @@ export function activate(context: vscode.ExtensionContext) {
             configuration = JSON.parse(fs.readFileSync(event.fileName).toString());
         }
     });
+
+    vscode.languages.registerDocumentFormattingEditProvider('dzn', {
+        provideDocumentFormattingEdits(document: vscode.TextDocument): vscode.ProviderResult<vscode.TextEdit[]> {
+            const formatConfiguration = configuration 
+                ? (configuration as { format?: dznlint.DznLintFormatUserConfiguration })["format"]
+                : undefined;
+
+            const fullText = document.getText();
+            return dznlint.format(fullText, formatConfiguration)
+                .then(newText => [vscode.TextEdit.replace(new vscode.Range(document.positionAt(0), document.positionAt(fullText.length)), newText)]);
+        }
+      });
 }
 
 // this method is called when your extension is deactivated
