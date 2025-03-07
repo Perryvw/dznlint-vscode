@@ -80,8 +80,8 @@ function updateDiagnostics(document: vscode.TextDocument, configuration?: dznlin
             message: d.message,
             severity: mapSeverity(d.severity),
             range: new vscode.Range(
-                new vscode.Position(d.range.from.line - 1, d.range.from.column),
-                new vscode.Position(d.range.to.line - 1, d.range.to.column)
+                new vscode.Position(Math.max(0, d.range.from.line - 1), d.range.from.column),
+                new vscode.Position(Math.max(0, d.range.to.line - 1), d.range.to.column)
             ),
         });
     }
