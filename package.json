@@ -50,7 +50,8 @@
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
-        "package": "vsce package"
+        "package": "vsce package",
+        "fix:prettier": "prettier --write ."
     },
     "devDependencies": {
         "@types/node": "14.x",

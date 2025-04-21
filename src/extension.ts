@@ -4,15 +4,19 @@ import * as path from "path";
 import * as vscode from "vscode";
 import * as dznlint from "dznlint";
 
+import { codeCompletionProvider } from "./code-completion";
+import { astNameToString, dznLintRangeToVscode } from "./util";
+
 const dznDiagnosticsCollection = vscode.languages.createDiagnosticCollection("dznlint-diagnostics");
 
 let program: dznlint.Program;
 
 // this method is called when your extension is activated
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
     console.log("dznlint-vscode active");
 
-    program = new dznlint.Program();
+    program = await dznlint.Program.Init();
+    const typeChecker = new dznlint.semantics.TypeChecker(program);
 
     // Push dznlint diagnostics collection to editor
     context.subscriptions.push(dznDiagnosticsCollection);
@@ -45,17 +49,142 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
-    vscode.languages.registerDocumentFormattingEditProvider('dzn', {
+    vscode.languages.registerDocumentFormattingEditProvider("dzn", {
         provideDocumentFormattingEdits(document: vscode.TextDocument): vscode.ProviderResult<vscode.TextEdit[]> {
-            const formatConfiguration = configuration 
+            const formatConfiguration = configuration
                 ? (configuration as { format?: dznlint.DznLintFormatUserConfiguration })["format"]
                 : undefined;
 
             const fullText = document.getText();
-            return dznlint.format(fullText, formatConfiguration)
-                .then(newText => [vscode.TextEdit.replace(new vscode.Range(document.positionAt(0), document.positionAt(fullText.length)), newText)]);
-        }
-      });
+            return dznlint
+                .format(fullText, formatConfiguration)
+                .then(newText => [
+                    vscode.TextEdit.replace(
+                        new vscode.Range(document.positionAt(0), document.positionAt(fullText.length)),
+                        newText
+                    ),
+                ]);
+        },
+    });
+
+    vscode.languages.registerDefinitionProvider("dzn", {
+        provideDefinition(document, position): vscode.Location | undefined {
+            const file = program.getCachedFile(document.fileName);
+            if (file) {
+                const name = dznlint.utils.findNameAtPosition(file, position.line, position.character, program);
+                if (name) {
+                    const symbol = typeChecker.symbolOfNode(name);
+                    if (symbol) {
+                        const file = dznlint.utils.findFirstParent(symbol?.declaration, dznlint.utils.isSourceFile);
+                        if (file?.fileName) {
+                            return new vscode.Location(
+                                vscode.Uri.file(file.fileName),
+                                new vscode.Position(
+                                    symbol.declaration.position.from.line,
+                                    symbol.declaration.position.from.column
+                                )
+                            );
+                        }
+                    }
+                }
+            }
+            return undefined;
+        },
+    });
+
+    vscode.languages.registerCompletionItemProvider("dzn", codeCompletionProvider(program, typeChecker), ".");
+
+    // vscode.languages.registerHoverProvider("dzn", {
+    //     provideHover(document, position, token): vscode.Hover {
+    //         return {
+    //             contents: ["hi!", "hi2"],
+    //         };
+    //     },
+    // });
+
+    vscode.languages.registerInlayHintsProvider("dzn", {
+        provideInlayHints(document, range, token): vscode.InlayHint[] | undefined {
+            const file = program.getCachedFile(document.fileName);
+            if (file?.ast) {
+                const hints: vscode.InlayHint[] = [];
+
+                dznlint.ast.visitFile(file.ast, file.source, node => {
+                    if (dznlint.utils.isOnStatement(node)) {
+                        for (const trigger of node.triggers) {
+                            if (!dznlint.utils.isKeyword(trigger) && trigger.parameterList) {
+                                const triggerSymbol = typeChecker.symbolOfNode(trigger.name);
+                                if (triggerSymbol) {
+                                    const declaration = triggerSymbol.declaration as dznlint.ast.Event;
+                                    for (let i = 0; i < Math.min(declaration.parameters.length, trigger.parameterList.parameters.length); i++)
+                                    {
+                                        hints.push({
+                                            label: declaration.parameters[i].direction?.text ?? "in",
+                                            position: dznLintRangeToVscode(trigger.parameterList.parameters[i].position).start,
+                                            paddingRight: true
+                                        })
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }, program);
+
+                return hints;
+            }
+            
+            return undefined;
+        },
+    });
+
+    vscode.languages.registerSignatureHelpProvider(
+        "dzn",
+        {
+            provideSignatureHelp(document, position, token, context): vscode.SignatureHelp | undefined {
+                const file = program.getCachedFile(document.fileName);
+                if (file) {
+                    const node = dznlint.utils.findLeafAtPosition(file, position.line, position.character, program);
+                    if (node && dznlint.utils.isCallExpression(node)) {
+                        const type = typeChecker.typeOfNode(node.expression);
+                        if (!type.declaration) return undefined;                        
+                        if (!dznlint.utils.isEvent(type.declaration) && !dznlint.utils.isFunctionDefinition(type.declaration)) return undefined;
+
+                        const help = new vscode.SignatureHelp();
+                        help.signatures.push(new vscode.SignatureInformation(type.name));
+                        help.activeSignature = 0;
+                        help.signatures[0].label += `(`;
+                        let paramIndex = help.signatures[0].label.length;
+                        for (let i = 0; i < type.declaration.parameters.length; i++) {
+                            const param = type.declaration.parameters[i];
+                            const label = `${param.direction?.text ?? "in"} ${astNameToString(param.type.typeName)} ${astNameToString(param.name)}`;
+                            help.signatures[0].label += label;
+                            help.signatures[0].parameters.push({
+                                label: [paramIndex, help.signatures[0].label.length]
+                            });
+                            if (i < type.declaration.parameters.length - 1) {
+                                help.signatures[0].label += ", ";
+                            }
+                            paramIndex = help.signatures[0].label.length;
+                        }
+                        help.signatures[0].label += `)`;
+
+                        help.activeParameter = 0;
+                        for (const arg of node.arguments.arguments) {
+                            if (dznLintRangeToVscode(arg.position).end.isBefore(position)) {
+                                help.activeParameter++;
+                            } else {
+                                break;
+                            }
+                        }
+
+                        return help;
+                    }
+                }
+                return undefined;
+            },
+        },
+        "(",
+        ","
+    );
 }
 
 // this method is called when your extension is deactivated
@@ -79,10 +208,7 @@ function updateDiagnostics(document: vscode.TextDocument, configuration?: dznlin
         documentDiagnostics.push({
             message: d.message,
             severity: mapSeverity(d.severity),
-            range: new vscode.Range(
-                new vscode.Position(Math.max(0, d.range.from.line - 1), d.range.from.column),
-                new vscode.Position(Math.max(0, d.range.to.line - 1), d.range.to.column)
-            ),
+            range: dznLintRangeToVscode(d.range),
         });
     }
 
