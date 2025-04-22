@@ -117,8 +117,10 @@ export async function activate(context: vscode.ExtensionContext) {
                                     const declaration = triggerSymbol.declaration as dznlint.ast.Event;
                                     for (let i = 0; i < Math.min(declaration.parameters.length, trigger.parameterList.parameters.length); i++)
                                     {
+                                        const direction = declaration.parameters[i].direction?.text ?? "in";
+                                        const type = dznlint.utils.nameToString(declaration.parameters[i].type.typeName);
                                         hints.push({
-                                            label: declaration.parameters[i].direction?.text ?? "in",
+                                            label: `${direction} ${type}`,
                                             position: dznLintRangeToVscode(trigger.parameterList.parameters[i].position).start,
                                             paddingRight: true
                                         })
