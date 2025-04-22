@@ -18,7 +18,7 @@ export function codeCompletionProvider(
                     program
                 );
                 if (leafAtPosition) {
-                    const { scope, isMember, owningSymbol, range } = getCompletionScope(leafAtPosition, typeChecker);
+                    const { scope, isMember, owningSymbol, range } = getCompletionScope(leafAtPosition, position, typeChecker);
                     const items: vscode.CompletionItem[] = [];
                     if (owningSymbol) {
                         const ownerType = typeChecker.typeOfSymbol(owningSymbol);
@@ -43,6 +43,7 @@ export function codeCompletionProvider(
 
 function getCompletionScope(
     node: dznlint.ast.AnyAstNode,
+    position: vscode.Position,
     typeChecker: dznlint.semantics.TypeChecker
 ): {
     scope: dznlint.utils.ScopedBlock;
@@ -85,6 +86,7 @@ function getCompletionScope(
                 isMember: false, // explicitly global compound
             };
         }
+    // Following cases are added to handle weird parse results from incomplete trees
     } else if (dznlint.utils.isReply(node)) {
         const scope = dznlint.utils.findFirstParent(node, dznlint.utils.isScopedBlock)!;
         return {
@@ -93,10 +95,23 @@ function getCompletionScope(
             owningSymbol: node.port && typeChecker.symbolOfNode(node.port),
             range: node.port?.position,
         };
+    } else if (dznlint.utils.isGuardStatement(node)) {
+        return {
+            scope: node,
+            isMember: true,
+            owningSymbol: typeChecker.symbolOfNode(node.condition),
+        }
     } else if (dznlint.utils.isSourceFile(node)) {
         return {
             scope: node,
             isMember: false,
+        };
+    } else if (dznlint.utils.isErrorNode(node)) {
+        const { scope, owningObject } = dznlint.utils.findNameAtLocationInErrorNode(node, position.line, position.character, typeChecker);
+        return {
+            scope,
+            isMember: owningObject !== undefined,
+            owningSymbol: owningObject
         };
     } else {
         const scope = dznlint.utils.findFirstParent(node, dznlint.utils.isScopedBlock)!;
@@ -188,6 +203,10 @@ function completionKind(node: dznlint.ast.AnyAstNode): vscode.CompletionItemKind
         case dznlint.ast.SyntaxKind.Keyword:
             if (dznlint.utils.isReplyKeyword(node)) return vscode.CompletionItemKind.Property;
             return vscode.CompletionItemKind.Constant;
+        case dznlint.ast.SyntaxKind.Identifier:
+            if (node.parent?.kind === dznlint.ast.SyntaxKind.EnumDefinition) {
+                return vscode.CompletionItemKind.EnumMember;
+            }
         default:
             return vscode.CompletionItemKind.Text;
     }
