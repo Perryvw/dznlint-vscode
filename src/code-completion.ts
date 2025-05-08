@@ -86,6 +86,23 @@ function getCompletionScope(
                 isMember: false, // explicitly global compound
             };
         }
+    } else if (dznlint.utils.isCompoundBindingExpression(node)) {
+        const scope = dznlint.utils.findFirstParent(node, dznlint.utils.isScopedBlock)!;
+        // We are in a compound name but not an identifier, X.<cursor> or .<cursor>
+        if (node.compound) {
+            // X.<cursor>
+            return {
+                scope,
+                isMember: true,
+                owningSymbol: typeChecker.symbolOfNode(node.compound),
+            };
+        } else {
+            // .<cursor>
+            return {
+                scope,
+                isMember: false, // explicitly global compound
+            };
+        }
     // Following cases are added to handle weird parse results from incomplete trees
     } else if (dznlint.utils.isReply(node)) {
         const scope = dznlint.utils.findFirstParent(node, dznlint.utils.isScopedBlock)!;
@@ -101,17 +118,17 @@ function getCompletionScope(
             isMember: true,
             owningSymbol: typeChecker.symbolOfNode(node.condition),
         }
-    } else if (dznlint.utils.isSourceFile(node)) {
-        return {
-            scope: node,
-            isMember: false,
-        };
     } else if (dznlint.utils.isErrorNode(node)) {
         const { scope, owningObject } = dznlint.utils.findNameAtLocationInErrorNode(node, position.line, position.character, typeChecker);
         return {
             scope,
             isMember: owningObject !== undefined,
             owningSymbol: owningObject
+        };
+    } else if (dznlint.utils.isScopedBlock(node)) {
+        return {
+            scope: node,
+            isMember: false,
         };
     } else {
         const scope = dznlint.utils.findFirstParent(node, dznlint.utils.isScopedBlock)!;
@@ -203,6 +220,8 @@ function completionKind(node: dznlint.ast.AnyAstNode): vscode.CompletionItemKind
         case dznlint.ast.SyntaxKind.Keyword:
             if (dznlint.utils.isReplyKeyword(node)) return vscode.CompletionItemKind.Property;
             return vscode.CompletionItemKind.Constant;
+        case dznlint.ast.SyntaxKind.Instance:
+            return vscode.CompletionItemKind.Variable;
         case dznlint.ast.SyntaxKind.Identifier:
             if (node.parent?.kind === dznlint.ast.SyntaxKind.EnumDefinition) {
                 return vscode.CompletionItemKind.EnumMember;
