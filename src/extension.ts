@@ -77,11 +77,12 @@ export async function activate(context: vscode.ExtensionContext) {
                     if (symbol) {
                         const file = dznlint.utils.findFirstParent(symbol?.declaration, dznlint.utils.isSourceFile);
                         if (file?.fileName) {
+                            const declaration = nodeHasName(symbol.declaration) ? symbol.declaration.name : symbol.declaration;
                             return new vscode.Location(
                                 vscode.Uri.file(file.fileName),
                                 new vscode.Position(
-                                    symbol.declaration.position.from.line,
-                                    symbol.declaration.position.from.column
+                                    declaration.position.from.line,
+                                    declaration.position.from.column
                                 )
                             );
                         }
@@ -266,4 +267,8 @@ function tryLoadDznLintConfig(): dznlint.DznLintUserConfiguration | undefined {
 
 function workspaceRoot() {
     return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd();
+}
+
+function nodeHasName(node: dznlint.ast.AnyAstNode): node is dznlint.ast.AnyAstNode & { name: dznlint.ast.AnyAstNode } {
+    return "name" in node;
 }
