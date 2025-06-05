@@ -18,7 +18,11 @@ export function codeCompletionProvider(
                     program
                 );
                 if (leafAtPosition) {
-                    const { scope, isMember, owningSymbol, range } = getCompletionScope(leafAtPosition, position, typeChecker);
+                    const { scope, isMember, owningSymbol, range } = getCompletionScope(
+                        leafAtPosition,
+                        position,
+                        typeChecker
+                    );
                     const items: vscode.CompletionItem[] = [];
                     if (owningSymbol) {
                         const ownerType = typeChecker.typeOfSymbol(owningSymbol);
@@ -103,7 +107,7 @@ function getCompletionScope(
                 isMember: false, // explicitly global compound
             };
         }
-    // Following cases are added to handle weird parse results from incomplete trees
+        // Following cases are added to handle weird parse results from incomplete trees
     } else if (dznlint.utils.isReply(node)) {
         const scope = dznlint.utils.findFirstParent(node, dznlint.utils.isScopedBlock)!;
         return {
@@ -117,13 +121,18 @@ function getCompletionScope(
             scope: node,
             isMember: true,
             owningSymbol: typeChecker.symbolOfNode(node.condition),
-        }
+        };
     } else if (dznlint.utils.isErrorNode(node)) {
-        const { scope, owningObject } = dznlint.utils.findNameAtLocationInErrorNode(node, position.line, position.character, typeChecker);
+        const { scope, owningObject } = dznlint.utils.findNameAtLocationInErrorNode(
+            node,
+            position.line,
+            position.character,
+            typeChecker
+        );
         return {
             scope,
             isMember: owningObject !== undefined,
-            owningSymbol: owningObject
+            owningSymbol: owningObject,
         };
     } else if (dznlint.utils.isScopedBlock(node)) {
         return {

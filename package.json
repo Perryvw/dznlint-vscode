@@ -2,7 +2,7 @@
     "name": "dznlint-vscode",
     "displayName": "dznlint for VSCode",
     "description": "Static analysis and coding style errors for Dezyne code.",
-    "version": "1.10.3",
+    "version": "2.0.0",
     "repository": "https://github.com/Perryvw/dznlint-vscode",
     "author": {
         "name": "Perryvw",
@@ -30,6 +30,11 @@
                     "description": "Include paths to use while resolving .dzn imports, separated by ; or in dzn -I format",
                     "type": "string",
                     "default": ""
+                },
+                "dznlint.ideFeatures": {
+                    "description": "Enable experimental dznlint IDE features such as code completion and code hints (might require a restart of VS)",
+                    "type": "boolean",
+                    "default": false
                 }
             }
         },
@@ -65,6 +70,6 @@
         "vsce": "^2.15.0"
     },
     "dependencies": {
-        "dznlint": "^2.0.0-beta.7"
+        "dznlint": "^2.0.1"
     }
 }
