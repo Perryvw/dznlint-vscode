@@ -70,6 +70,6 @@
         "vsce": "^2.15.0"
     },
     "dependencies": {
-        "dznlint": "^2.0.1"
+        "dznlint": "^2.0.2"
     }
 }
