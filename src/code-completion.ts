@@ -34,7 +34,7 @@ export function codeCompletionProvider(
                         return undefined; // We are a member but no owning symbol -> can't autocomplete
                     } else {
                         // Not a member, autocomplete with variables available in scope
-                        for (const { name, declaration } of findVariablesInScopeTree(scope, typeChecker)) {
+                        for (const [name, declaration] of typeChecker.findAllVariablesKnownInScope(scope)) {
                             items.push(completionItemForNode(name, declaration, range));
                         }
                     }
@@ -146,25 +146,6 @@ function getCompletionScope(
             isMember: false,
         };
     }
-}
-
-function findVariablesInScopeTree(
-    leafScope: dznlint.utils.ScopedBlock,
-    typeChecker: dznlint.semantics.TypeChecker
-): Array<{ name: string; declaration: dznlint.ast.AnyAstNode }> {
-    let s: dznlint.utils.ScopedBlock | undefined = leafScope;
-    const result: Array<{ name: string; declaration: dznlint.ast.AnyAstNode }> = [];
-    while (s) {
-        const variables = typeChecker.findVariablesDeclaredInScope(s);
-        for (const [name, declaration] of variables) {
-            result.push({
-                name,
-                declaration,
-            });
-        }
-        s = dznlint.utils.findFirstParent(s, dznlint.utils.isScopedBlock);
-    }
-    return result;
 }
 
 function completionItemForNode(
