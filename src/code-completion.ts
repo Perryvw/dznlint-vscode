@@ -18,6 +18,8 @@ export function codeCompletionProvider(
                     program
                 );
                 if (leafAtPosition) {
+                    if (!shouldCompleteNode(leafAtPosition)) return undefined;
+
                     const { scope, isMember, owningSymbol, range } = getCompletionScope(
                         leafAtPosition,
                         position,
@@ -43,6 +45,29 @@ export function codeCompletionProvider(
             }
         },
     };
+}
+
+function shouldCompleteNode(node: dznlint.ast.AnyAstNode): boolean {
+
+    if (dznlint.utils.isIdentifier(node) && node.parent)
+    {
+        // Don't try to autocomplete the names of definitions (as you cannot complete the thing you're currently definiing)
+        if (dznlint.utils.isVariableDefinition(node.parent) && node === node.parent.name) return false;
+        else if (dznlint.utils.isFunctionParameter(node.parent) && node === node.parent.name) return false;
+        else if (dznlint.utils.isOnParameter(node.parent) && node === node.parent.name) return false;
+        else if (dznlint.utils.isPort(node.parent) && node === node.parent.name) return false;
+        else if (dznlint.utils.isEvent(node.parent) && node === node.parent.name) return false;
+        else if (dznlint.utils.isEventParameter(node.parent) && node === node.parent.name) return false;
+        else if (dznlint.utils.isInstance(node.parent) && node === node.parent.name) return false;
+        else if (dznlint.utils.isFunctionDefinition(node.parent) && node === node.parent.name) return false;
+        else if (dznlint.utils.isEnumDefinition(node.parent)) return false; // Don't complete the name nor values of an enum
+        else if (dznlint.utils.isExtern(node.parent)) return false;
+        else if (dznlint.utils.isComponentDefinition(node.parent) && node === node.parent.name) return false;
+        else if (dznlint.utils.isInterfaceDefinition(node.parent) && node === node.parent.name) return false;
+        else if (dznlint.utils.isIntDefinition(node.parent)) return false;
+    }
+
+    return true;
 }
 
 function getCompletionScope(
