@@ -119,7 +119,7 @@ export async function activate(context: vscode.ExtensionContext) {
                         node => {
                             if (dznlint.utils.isOnStatement(node)) {
                                 for (const trigger of node.triggers) {
-                                    if (!dznlint.utils.isKeyword(trigger) && trigger.parameterList) {
+                                    if (!dznlint.utils.isKeyword(trigger) && !dznlint.utils.isErrorNode(trigger) && trigger.parameterList) {
                                         const triggerSymbol = typeChecker.symbolOfNode(trigger.name);
                                         if (triggerSymbol) {
                                             const declaration = triggerSymbol.declaration as dznlint.ast.Event;
