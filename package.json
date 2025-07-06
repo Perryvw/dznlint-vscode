@@ -2,7 +2,7 @@
     "name": "dznlint-vscode",
     "displayName": "dznlint for VSCode",
     "description": "Static analysis and coding style errors for Dezyne code.",
-    "version": "2.2.0",
+    "version": "2.3.1",
     "repository": "https://github.com/Perryvw/dznlint-vscode",
     "author": {
         "name": "Perryvw",
