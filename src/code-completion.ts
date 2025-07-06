@@ -48,9 +48,7 @@ export function codeCompletionProvider(
 }
 
 function shouldCompleteNode(node: dznlint.ast.AnyAstNode): boolean {
-
-    if (dznlint.utils.isIdentifier(node) && node.parent)
-    {
+    if (dznlint.utils.isIdentifier(node) && node.parent) {
         // Don't try to autocomplete the names of definitions (as you cannot complete the thing you're currently definiing)
         if (dznlint.utils.isVariableDefinition(node.parent) && node === node.parent.name) return false;
         else if (dznlint.utils.isFunctionParameter(node.parent) && node === node.parent.name) return false;
@@ -60,7 +58,8 @@ function shouldCompleteNode(node: dznlint.ast.AnyAstNode): boolean {
         else if (dznlint.utils.isEventParameter(node.parent) && node === node.parent.name) return false;
         else if (dznlint.utils.isInstance(node.parent) && node === node.parent.name) return false;
         else if (dznlint.utils.isFunctionDefinition(node.parent) && node === node.parent.name) return false;
-        else if (dznlint.utils.isEnumDefinition(node.parent)) return false; // Don't complete the name nor values of an enum
+        else if (dznlint.utils.isEnumDefinition(node.parent))
+            return false; // Don't complete the name nor values of an enum
         else if (dznlint.utils.isExtern(node.parent)) return false;
         else if (dznlint.utils.isComponentDefinition(node.parent) && node === node.parent.name) return false;
         else if (dznlint.utils.isInterfaceDefinition(node.parent) && node === node.parent.name) return false;

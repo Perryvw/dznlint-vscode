@@ -6,6 +6,7 @@ import * as dznlint from "dznlint";
 
 import { codeCompletionProvider } from "./code-completion";
 import { astNameToString, dznLintRangeToVscode } from "./util";
+import { hoverProvider } from "./hover";
 
 const dznDiagnosticsCollection = vscode.languages.createDiagnosticCollection("dznlint-diagnostics");
 
@@ -99,13 +100,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
         vscode.languages.registerCompletionItemProvider("dzn", codeCompletionProvider(program, typeChecker), ".");
 
-        // vscode.languages.registerHoverProvider("dzn", {
-        //     provideHover(document, position, token): vscode.Hover {
-        //         return {
-        //             contents: ["hi!", "hi2"],
-        //         };
-        //     },
-        // });
+        vscode.languages.registerHoverProvider("dzn", hoverProvider(program, typeChecker));
 
         vscode.languages.registerInlayHintsProvider("dzn", {
             provideInlayHints(document, range, token): vscode.InlayHint[] | undefined {
@@ -119,7 +114,11 @@ export async function activate(context: vscode.ExtensionContext) {
                         node => {
                             if (dznlint.utils.isOnStatement(node)) {
                                 for (const trigger of node.triggers) {
-                                    if (!dznlint.utils.isKeyword(trigger) && !dznlint.utils.isErrorNode(trigger) && trigger.parameterList) {
+                                    if (
+                                        !dznlint.utils.isKeyword(trigger) &&
+                                        !dznlint.utils.isErrorNode(trigger) &&
+                                        trigger.parameterList
+                                    ) {
                                         const triggerSymbol = typeChecker.symbolOfNode(trigger.name);
                                         if (triggerSymbol) {
                                             const declaration = triggerSymbol.declaration as dznlint.ast.Event;
