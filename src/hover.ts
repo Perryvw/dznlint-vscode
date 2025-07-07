@@ -45,6 +45,7 @@ function symbolTooltip(
     if (dznlint.utils.isOnParameter(declaration)) return onParameterTooltip(declaration, typeChecker);
     if (dznlint.utils.isVariableDefinition(declaration)) return variableDefinitionTooltip(declaration);
     if (dznlint.utils.isExtern(declaration)) return externDefinitionTooltip(declaration);
+    if (dznlint.utils.isInstance(declaration)) return instanceTooltip(declaration);
 
     return undefined;
 }
@@ -138,6 +139,12 @@ function variableDefinitionTooltip(declaration: dznlint.ast.VariableDefinition):
 
 function externDefinitionTooltip(declaration: dznlint.ast.ExternDeclaration): Tooltip {
     return [dznHighlightedString(`extern ${astNameToString(declaration.name)} $${declaration.value.text}$;`)];
+}
+
+function instanceTooltip(declaration: dznlint.ast.Instance): Tooltip {
+    return [
+        dznHighlightedString(`${astNameToString(declaration.type.typeName)} ${astNameToString(declaration.name)};`),
+    ];
 }
 
 function dznHighlightedString(str: string): vscode.MarkdownString {
