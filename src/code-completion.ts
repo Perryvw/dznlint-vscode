@@ -53,6 +53,7 @@ function shouldCompleteNode(node: dznlint.ast.AnyAstNode): boolean {
         if (dznlint.utils.isVariableDefinition(node.parent) && node === node.parent.name) return false;
         else if (dznlint.utils.isFunctionParameter(node.parent) && node === node.parent.name) return false;
         else if (dznlint.utils.isOnParameter(node.parent) && node === node.parent.name) return false;
+        else if (dznlint.utils.isEventParameter(node.parent) && node === node.parent.name) return false;
         else if (dznlint.utils.isPort(node.parent) && node === node.parent.name) return false;
         else if (dznlint.utils.isEvent(node.parent) && node === node.parent.name) return false;
         else if (dznlint.utils.isEventParameter(node.parent) && node === node.parent.name) return false;
