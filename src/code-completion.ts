@@ -1,7 +1,7 @@
 import * as dznlint from "dznlint";
 import * as vscode from "vscode";
 import { astNameToString, dznLintRangeToVscode } from "./util";
-import { isKeyword } from "dznlint/util";
+import { findFirstParent, isKeyword } from "dznlint/util";
 
 export function codeCompletionProvider(
     program: dznlint.Program,
@@ -39,6 +39,7 @@ export function codeCompletionProvider(
                         for (const [name, declaration] of typeChecker.findAllVariablesKnownInScope(scope)) {
                             items.push(completionItemForNode(name, declaration, range));
                         }
+                        items.push(...keywordsInScope(scope));
                     }
                     return new vscode.CompletionList(items);
                 }
@@ -173,6 +174,69 @@ function getCompletionScope(
     }
 }
 
+function keywordsInScope(scope: dznlint.utils.ScopedBlock): vscode.CompletionItem[] {
+    const keywords = [keywordCompletionItem("enum")];
+
+    const needKeywordsForScope = (scopeType: dznlint.utils.ScopedBlock["kind"]) =>
+        scope.kind === scopeType ||
+        findFirstParent(scope, (p): p is dznlint.ast.Behavior => p.kind === scopeType) !== undefined;
+
+    if (needKeywordsForScope(dznlint.ast.SyntaxKind.Behavior)) {
+        keywords.push(
+            keywordCompletionItem("on"),
+            keywordCompletionItem("if"),
+            keywordCompletionItem("in"),
+            keywordCompletionItem("out"),
+            // TODO: These should be in dznlint.typeChecker.findAllVariablesKnownInScope
+            keywordCompletionItem("true"),
+            keywordCompletionItem("false"),
+            keywordCompletionItem("illegal"),
+            keywordCompletionItem("void"),
+            keywordCompletionItem("bool"),
+            keywordCompletionItem("reply")
+        );
+
+        if (needKeywordsForScope(dznlint.ast.SyntaxKind.FunctionDefinition)) {
+            // Only suggest return insdie functions
+            keywords.push(keywordCompletionItem("return"));
+        }
+    } else {
+        if (needKeywordsForScope(dznlint.ast.SyntaxKind.ComponentDefinition)) {
+            keywords.push(
+                keywordCompletionItem("behavior"),
+                keywordCompletionItem("system"),
+                keywordCompletionItem("requires"),
+                keywordCompletionItem("provides")
+            );
+        } else if (needKeywordsForScope(dznlint.ast.SyntaxKind.InterfaceDefinition)) {
+            keywords.push(
+                keywordCompletionItem("behavior"),
+                keywordCompletionItem("in"),
+                keywordCompletionItem("out"),
+                // TODO: These should be in dznlint.typeChecker.findAllVariablesKnownInScope
+                keywordCompletionItem("void"),
+                keywordCompletionItem("bool"),
+                keywordCompletionItem("reply")
+            );
+        } else {
+            if (!needKeywordsForScope(dznlint.ast.SyntaxKind.Namespace)) {
+                // Only complete import when not inside a namespace
+                keywords.push(keywordCompletionItem("import"));
+            }
+
+            keywords.push(
+                keywordCompletionItem("namespace"),
+                keywordCompletionItem("extern"),
+                keywordCompletionItem("subint"),
+                keywordCompletionItem("component"),
+                keywordCompletionItem("interface")
+            );
+        }
+    }
+
+    return keywords;
+}
+
 function completionItemForNode(
     name: string,
     node: dznlint.ast.AnyAstNode,
@@ -207,6 +271,13 @@ function functionLikeCompletionItem(
         },
         kind: completionKind(node),
         range: range && dznLintRangeToVscode(range),
+    };
+}
+
+function keywordCompletionItem(name: string): vscode.CompletionItem {
+    return {
+        label: name,
+        kind: vscode.CompletionItemKind.Keyword,
     };
 }
 
