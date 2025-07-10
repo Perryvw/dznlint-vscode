@@ -92,6 +92,27 @@ export async function activate(context: vscode.ExtensionContext) {
                                 );
                             }
                         }
+                    } else {
+                        const leafAtPosition = dznlint.utils.findLeafAtPosition(
+                            file,
+                            position.line,
+                            position.character,
+                            program
+                        );
+                        if (leafAtPosition) {
+                            if (dznlint.utils.isImportStatement(leafAtPosition)) {
+                                // Try to resolve from project root
+                                let filePath = path.join(workspaceRoot(), leafAtPosition.fileName);
+                                if (fs.existsSync(filePath)) {
+                                    return new vscode.Location(vscode.Uri.file(filePath), new vscode.Position(0, 0));
+                                }
+                                // Otherwise try to resolve relative to current file
+                                filePath = path.join(path.dirname(document.fileName), leafAtPosition.fileName);
+                                if (fs.existsSync(filePath)) {
+                                    return new vscode.Location(vscode.Uri.file(filePath), new vscode.Position(0, 0));
+                                }
+                            }
+                        }
                     }
                 }
                 return undefined;
