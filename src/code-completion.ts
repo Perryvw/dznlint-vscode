@@ -1,7 +1,11 @@
+import * as fs from "fs";
+import * as path from "path";
+
 import * as dznlint from "dznlint";
 import * as vscode from "vscode";
 import { astNameToString, dznLintRangeToVscode } from "./util";
 import { findFirstParent, isKeyword } from "dznlint/util";
+import { readIncludePaths, workspaceRoot } from "./extension";
 
 export function codeCompletionProvider(
     program: dznlint.Program,
@@ -19,6 +23,10 @@ export function codeCompletionProvider(
                 );
                 if (leafAtPosition) {
                     if (!shouldCompleteNode(leafAtPosition)) return undefined;
+
+                    if (dznlint.utils.isImportStatement(leafAtPosition)) {
+                        return completionListForImport(leafAtPosition.fileName);
+                    }
 
                     const { scope, isMember, owningSymbol, range } = getCompletionScope(
                         leafAtPosition,
@@ -279,6 +287,33 @@ function keywordCompletionItem(name: string): vscode.CompletionItem {
         label: name,
         kind: vscode.CompletionItemKind.Keyword,
     };
+}
+
+function completionListForImport(partialPath: string): vscode.CompletionList {
+    const partialRoot = path.dirname(partialPath);
+    const root = workspaceRoot();
+    const roots = readIncludePaths();
+    if (roots.length === 0) {
+        roots.push(root);
+    }
+
+    const result: vscode.CompletionItem[] = [];
+
+    for (const pathRoot of roots) {
+        const dir = path.join(pathRoot, partialRoot);
+        if (fs.existsSync(dir)) {
+            // We found the root of the include, include all items in here
+            for (const item of fs.readdirSync(dir, { withFileTypes: true })) {
+                if (item.isDirectory()) {
+                    result.push(new vscode.CompletionItem(item.name, vscode.CompletionItemKind.Folder));
+                } else {
+                    result.push(new vscode.CompletionItem(item.name, vscode.CompletionItemKind.File));
+                }
+            }
+        }
+    }
+
+    return new vscode.CompletionList(result);
 }
 
 function completionKind(node: dznlint.ast.AnyAstNode): vscode.CompletionItemKind {

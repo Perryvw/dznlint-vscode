@@ -265,7 +265,7 @@ function updateDiagnostics(document: vscode.TextDocument, configuration?: dznlin
     dznDiagnosticsCollection.set(document.uri, documentDiagnostics);
 }
 
-function readIncludePaths(): string[] {
+export function readIncludePaths(): string[] {
     let includePaths = vscode.workspace.getConfiguration("dznlint").get<string>("includePaths")?.trim() ?? "";
     if (includePaths.length === 0) {
         // If no dznlint include dirs were found, try looking for dezyne.ide include paths instead
@@ -312,7 +312,7 @@ function tryLoadDznLintConfig(): dznlint.DznLintUserConfiguration | undefined {
     }
 }
 
-function workspaceRoot() {
+export function workspaceRoot() {
     return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd();
 }
 
