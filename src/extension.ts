@@ -119,7 +119,7 @@ export async function activate(context: vscode.ExtensionContext) {
             },
         });
 
-        vscode.languages.registerCompletionItemProvider("dzn", codeCompletionProvider(program, typeChecker), ".");
+        vscode.languages.registerCompletionItemProvider("dzn", codeCompletionProvider(program, typeChecker), ".", "/");
 
         vscode.languages.registerHoverProvider("dzn", hoverProvider(program, typeChecker));
 
