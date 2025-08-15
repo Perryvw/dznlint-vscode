@@ -15,6 +15,9 @@ export function codeCompletionProvider(
         provideCompletionItems(document, position, token, context) {
             const file = program.getCachedFile(document.fileName);
             if (file) {
+                // Don't auto-complete while inside a (single-line) comment
+                if (insideComment(position, document)) return undefined;
+
                 const leafAtPosition = dznlint.utils.findLeafAtPosition(
                     file,
                     position.line,
@@ -75,6 +78,9 @@ function shouldCompleteNode(node: dznlint.ast.AnyAstNode): boolean {
         else if (dznlint.utils.isInterfaceDefinition(node.parent) && node === node.parent.name) return false;
         else if (dznlint.utils.isIntDefinition(node.parent)) return false;
     }
+
+    // Also don't complete inside dollar literals
+    if (node.kind === dznlint.ast.SyntaxKind.DollarLiteral) return false;
 
     return true;
 }
@@ -380,4 +386,9 @@ function completionDetail(node: dznlint.ast.AnyAstNode): string | undefined {
             return isKeyword(node) ? node.text : undefined;
     }
     return undefined;
+}
+
+function insideComment(position: vscode.Position, document: vscode.TextDocument): boolean {
+    const lineBeforeCursor = document.getText(new vscode.Range(position.with(position.line, 0), position));
+    return lineBeforeCursor.match(/\s*\/\//) !== null;
 }
