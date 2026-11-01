@@ -9,9 +9,9 @@ export function dznLintRangeToVscode(range: dznlint.SourceRange): vscode.Range {
 }
 
 export function astNameToString(name: dznlint.ast.Name): string {
-    if (dznlint.utils.isIdentifier(name)) {
-        return name.text;
-    } else {
+    if (dznlint.utils.isCompoundName(name)) {
         return `${name.compound ? astNameToString(name.compound) : ""}.${name.name.text}`;
+    } else {
+        return name.text;
     }
 }
